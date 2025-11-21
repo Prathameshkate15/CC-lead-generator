@@ -1,7 +1,12 @@
-import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenAI, Type, Schema } from "@google/genai";
 import { Lead, SearchFilters } from "../types";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// Check if API key is available before initializing
+if (!process.env.API_KEY) {
+  console.warn("API_KEY is missing from environment variables.");
+}
+
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
 
 const SYSTEM_INSTRUCTION = `
 You are the Head of Lead Generation for "ClearCut STUDIO," a premium video editing agency.
@@ -31,6 +36,10 @@ export const findLeads = async (
   query: string,
   filters: SearchFilters
 ): Promise<Lead[]> => {
+  if (!process.env.API_KEY) {
+    throw new Error("API_KEY is missing. Please add it to your environment variables (e.g., .env or Vercel Settings).");
+  }
+
   const modelId = "gemini-2.5-flash";
 
   const prompt = `
@@ -64,6 +73,13 @@ export const findLeads = async (
       config: {
         systemInstruction: SYSTEM_INSTRUCTION,
         responseMimeType: "application/json",
+        // Disable safety settings to prevent harmless documentary topics (like True Crime) from being blocked
+        safetySettings: [
+            { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
+            { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
+            { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" },
+            { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" }
+        ],
         responseSchema: {
           type: Type.ARRAY,
           items: {
@@ -85,7 +101,7 @@ export const findLeads = async (
       return leads;
     }
     
-    throw new Error("No data returned from Gemini.");
+    throw new Error("Gemini returned an empty response. Try refining your query.");
   } catch (error) {
     console.error("Error fetching leads:", error);
     throw error;

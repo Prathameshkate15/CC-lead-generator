@@ -39,9 +39,10 @@ const App: React.FC = () => {
       const result = await findLeads(blockList, searchQuery, filters);
       setLeads(result);
       setStatus(SearchStatus.SUCCESS);
-    } catch (err) {
+    } catch (err: any) {
       setStatus(SearchStatus.ERROR);
-      setErrorMsg("Failed to generate leads. The API might be busy or the input was too confusing.");
+      // Show the actual error message to help debug (e.g. "API Key Missing" or "Safety Block")
+      setErrorMsg(err.message || "An unexpected error occurred");
     }
   }, [blockList, searchQuery, filters]);
 
@@ -64,9 +65,6 @@ const App: React.FC = () => {
     if (leads.length === 0) return;
     
     // Create TSV content
-    // We don't necessarily need headers if pasting into an existing sheet, 
-    // but it's safer to include them or just raw data. 
-    // Let's do raw data rows for easy appending to lists.
     const rows = leads.map(l => `${l.channelName}\t${l.subscriberCount}\t${l.niche}\t${l.editGap}`).join('\n');
     
     navigator.clipboard.writeText(rows);
@@ -249,7 +247,7 @@ const App: React.FC = () => {
             {errorMsg && (
                 <div className="p-4 rounded-lg bg-red-900/20 border border-red-900/50 flex items-start gap-3 text-red-200 text-xs">
                     <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                    {errorMsg}
+                    <span className="break-all">{errorMsg}</span>
                 </div>
             )}
 
