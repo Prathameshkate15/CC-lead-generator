@@ -1,5 +1,6 @@
 import { GoogleGenAI, Type, Schema } from "@google/genai";
 import { Lead, SearchFilters } from "../types";
+import { verifyChannels, VerifiedChannelData } from "./youtubeService";
 
 // Check if API key is available before initializing
 if (!process.env.API_KEY) {
@@ -67,6 +68,7 @@ export const findLeads = async (
   `;
 
   try {
+    // Step 1: Get channel suggestions from Gemini AI
     const response = await ai.models.generateContent({
       model: modelId,
       contents: prompt,
@@ -96,12 +98,60 @@ export const findLeads = async (
       },
     });
 
-    if (response.text) {
-      const leads = JSON.parse(response.text) as Lead[];
-      return leads;
+    if (!response.text) {
+      throw new Error("Gemini returned an empty response. Try refining your query.");
+    }
+
+    const geminiLeads = JSON.parse(response.text) as Lead[];
+    
+    // Step 2: Verify channels with YouTube API (if API key is available)
+    const youtubeApiKey = process.env.YOUTUBE_API_KEY;
+    
+    if (!youtubeApiKey) {
+      console.warn('YouTube API key is missing. Returning unverified leads from Gemini.');
+      return geminiLeads;
+    }
+
+    // Extract channel names for verification
+    const channelNames = geminiLeads.map(lead => lead.channelName);
+    
+    // Verify channels and filter out those that don't exist or haven't posted recently
+    const verifiedChannels = await verifyChannels(channelNames, youtubeApiKey);
+    
+    // Create a map of verified channel data by channel name (case-insensitive)
+    const verifiedMap = new Map<string, VerifiedChannelData>();
+    verifiedChannels.forEach(vc => {
+      verifiedMap.set(vc.channelName.toLowerCase(), vc);
+    });
+    
+    // Step 3: Merge Gemini data with YouTube verified data
+    const verifiedLeads: Lead[] = [];
+    
+    for (const geminiLead of geminiLeads) {
+      const verified = verifiedMap.get(geminiLead.channelName.toLowerCase());
+      
+      if (verified) {
+        // Channel is verified - use real YouTube data
+        verifiedLeads.push({
+          channelName: verified.channelName,
+          subscriberCount: verified.subscriberCount,
+          actualSubscribers: verified.actualSubscribers,
+          niche: geminiLead.niche,
+          editGap: geminiLead.editGap,
+          verified: true,
+          lastUpload: verified.lastUpload,
+          channelUrl: verified.channelUrl,
+        });
+      }
+      // Skip channels that failed verification (don't exist or haven't posted in 30 days)
     }
     
-    throw new Error("Gemini returned an empty response. Try refining your query.");
+    // If no channels were verified, throw an error
+    if (verifiedLeads.length === 0) {
+      throw new Error("No channels could be verified with YouTube API. They may not exist or haven't posted in the last 30 days.");
+    }
+    
+    return verifiedLeads;
   } catch (error) {
     console.error("Error fetching leads:", error);
     throw error;

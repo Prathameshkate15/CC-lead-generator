@@ -1,8 +1,12 @@
 export interface Lead {
   channelName: string;
   subscriberCount: string;
+  actualSubscribers?: number; // Actual number from YouTube API
   niche: string;
   editGap: string;
+  verified?: boolean; // Whether data is from YouTube API
+  lastUpload?: string; // e.g., "5 days ago"
+  channelUrl?: string; // YouTube channel URL
 }
 
 export enum SearchStatus {
