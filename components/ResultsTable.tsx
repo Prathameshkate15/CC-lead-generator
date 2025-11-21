@@ -57,7 +57,7 @@ export const ResultsTable: React.FC<ResultsTableProps> = ({ leads }) => {
                     <span className="text-zinc-400 font-mono">
                       {lead.subscriberCount}
                     </span>
-                    {lead.actualSubscribers && (
+                    {lead.actualSubscribers !== undefined && (
                       <span className="text-[10px] text-zinc-600 font-mono">
                         ({lead.actualSubscribers.toLocaleString()})
                       </span>

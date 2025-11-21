@@ -146,9 +146,9 @@ export const findLeads = async (
       // Skip channels that failed verification (don't exist or haven't posted in 30 days)
     }
     
-    // If no channels were verified, throw an error
+    // If no channels were verified, throw an error with helpful guidance
     if (verifiedLeads.length === 0) {
-      throw new Error("No channels could be verified with YouTube API. They may not exist or haven't posted in the last 30 days.");
+      throw new Error("No channels could be verified with YouTube API. They may not exist or haven't posted in the last 30 days. Try different search terms or adjust your filters.");
     }
     
     return verifiedLeads;

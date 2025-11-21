@@ -49,10 +49,15 @@ function formatSubscriberCount(count: number): string {
   if (count >= 1000000) {
     return `${(count / 1000000).toFixed(1)}M`;
   } else if (count >= 1000) {
-    return `${(count / 1000).toFixed(0)}K`;
+    const inK = count / 1000;
+    // Show decimal for values like 1.5K, but not for whole numbers like 127K
+    return inK >= 10 ? `${Math.round(inK)}K` : `${inK.toFixed(1)}K`;
   }
   return count.toString();
 }
+
+// Approximate days in a month (used for display purposes only)
+const APPROX_DAYS_PER_MONTH = 30;
 
 /**
  * Calculate days ago from a date string
@@ -75,12 +80,12 @@ function formatLastUpload(dateString: string): string {
     return 'Today';
   } else if (days === 1) {
     return '1 day ago';
-  } else if (days < 30) {
+  } else if (days < APPROX_DAYS_PER_MONTH) {
     return `${days} days ago`;
-  } else if (days < 60) {
+  } else if (days < APPROX_DAYS_PER_MONTH * 2) {
     return '1 month ago';
   } else {
-    const months = Math.floor(days / 30);
+    const months = Math.floor(days / APPROX_DAYS_PER_MONTH);
     return `${months} months ago`;
   }
 }
